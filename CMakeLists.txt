@@ -147,6 +147,7 @@ add_executable(romaa_driver src/romaa_driver.cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(romaa_driver ${catkin_LIBRARIES})
+target_link_libraries(romaa_driver romaa_comm)
 
 #############
 ## Install ##
