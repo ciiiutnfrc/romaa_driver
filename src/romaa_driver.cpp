@@ -4,9 +4,14 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 
+// tf2 library headers.
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>//toMsg
+
+// The srv class for the services.
+#include <std_srvs/Empty.h> 
+#include <romaa_ros/SetOdometry.h>
 
 #include <romaa_comm/romaa_comm.h>
 romaa_comm *romaa;
@@ -16,6 +21,10 @@ const int def_baud = 115200;
 
 // Callback function definitions.
 void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& );
+bool resetOdometrySrvCb(std_srvs::Empty::Request &,
+                        std_srvs::Empty::Response &);
+bool setOdometrySrvCb(romaa_ros::SetOdometry::Request &,
+                      romaa_ros::SetOdometry::Response &);
 
 int main(int argc, char * argv[])
 {
@@ -41,9 +50,16 @@ int main(int argc, char * argv[])
   }
   romaa->enable_motor();
 
+  // Publisher and subscriber objects.
   ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 100);
   ros::Subscriber cmd_vel_sub = nh.subscribe<geometry_msgs::Twist>("cmd_vel",\
       1, cmdVelCallback);
+
+  // Services objects.
+  ros::ServiceServer reset_odom_srv = nh.advertiseService("reset_odometry", 
+      &resetOdometrySrvCb);
+  ros::ServiceServer set_odom_srv = nh.advertiseService("set_odometry", 
+      &setOdometrySrvCb);
 
   // Odometry variables
   float x, y, a, v, w;
@@ -117,6 +133,7 @@ int main(int argc, char * argv[])
   return 0;
 }
 
+// 'cmd_vel' subscriber callback function.
 void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 {
   romaa->set_speed(cmd_vel->linear.x, cmd_vel->angular.z);
@@ -124,3 +141,21 @@ void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_vel)
       << ", w: " << cmd_vel->angular.z);
 }
 
+// 'reset_odometry' services callback function.
+bool resetOdometrySrvCb(std_srvs::Empty::Request &req,
+    std_srvs::Empty::Response &resp)
+{
+  romaa->reset_odometry();
+  ROS_DEBUG("Reset odometry.");
+  return true;
+}
+
+// 'set_odometry' services callback function.
+bool setOdometrySrvCb(romaa_ros::SetOdometry::Request &req,
+    romaa_ros::SetOdometry::Response &resp)
+{
+  romaa->set_odometry(req.x, req.y, req.theta);
+  ROS_DEBUG_STREAM("Setting odometry to (" << req.x << ", "
+      << req.y << ", " << req.theta << ")");
+  return true;
+}
