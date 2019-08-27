@@ -1,5 +1,9 @@
 #include "ros/ros.h"
+
+// Messages headers.
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Twist.h>
+
 #include <tf/transform_datatypes.h>
 
 #include <romaa_comm/romaa_comm.h>
@@ -7,6 +11,9 @@ romaa_comm *romaa;
 
 const std::string def_port = "/dev/ttyUSB0";
 const int def_baud = 115200;
+
+// Callback function definitions.
+void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& );
 
 int main(int argc, char * argv[])
 {
@@ -33,6 +40,8 @@ int main(int argc, char * argv[])
   romaa->enable_motor();
 
   ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 100);
+  ros::Subscriber cmd_vel_sub = nh.subscribe<geometry_msgs::Twist>("cmd_vel",\
+      1, cmdVelCallback);
 
   // Odometry variables
   float x, y, a, v, w;
@@ -84,3 +93,11 @@ int main(int argc, char * argv[])
   delete romaa;
   return 0;
 }
+
+void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_vel)
+{
+  romaa->set_speed(cmd_vel->linear.x, cmd_vel->angular.z);
+  ROS_DEBUG_STREAM("Setting speed. v: " << cmd_vel->linear.x 
+      << ", w: " << cmd_vel->angular.z);
+}
+
