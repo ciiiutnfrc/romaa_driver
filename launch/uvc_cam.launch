@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node pkg="uvc_camera" type="uvc_camera_node" name="cam" output="screen">
+    <param name="device" value="/dev/video0" />
+  </node>
+
+</launch>
+

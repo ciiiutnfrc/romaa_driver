@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Node of joystick driver -->
+  <node pkg="joy" type="joy_node" name="joy" > 
+    <param name="autorepeat_rate" value="5.0" />
+  </node>
+
+  <!-- Node for joystick teleoperation -->
+  <node pkg="teleop_twist_joy" type="teleop_node" name="teleop" >
+    <!-- Parameter for 'teleop_node' node -->
+    <param name="enable_button" value="5" />
+    <param name="axis_linear" value="1" />
+    <param name="axis_angular" value="2" />
+    <param name="scale_linear" value="0.35" />
+    <param name="scale_angular" value="0.60" />
+
+    <!-- Remapping Topic name -->
+    <remap from="/cmd_vel" to="/romaa/cmd_vel" />
+  </node>
+
+</launch>

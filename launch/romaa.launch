@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Arguments for RoMAA driver node -->
+  <arg name="port" default="/dev/ttyUSB0" />
+  <arg name="baudrate" default="115200" />
+
+  <!-- Node of RoMAA driver -->
+  <node pkg="romaa_ros" type="romaa_driver" name="romaa" >
+    <param name="port" value="$(arg port)" />
+    <param name="baud" value="$(arg baudrate)" />
+  </node>
+
+</launch>
