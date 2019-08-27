@@ -1,5 +1,6 @@
 #include "ros/ros.h"
 #include <nav_msgs/Odometry.h>
+#include <tf/transform_datatypes.h>
 
 #include <romaa_comm/romaa_comm.h>
 romaa_comm *romaa;
@@ -33,7 +34,8 @@ int main(int argc, char * argv[])
 
   ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 100);
 
-  // Message variables
+  // Odometry variables
+  float x, y, a, v, w;
   nav_msgs::Odometry odom_msg;
 
   ros::Time current_time;
@@ -41,12 +43,32 @@ int main(int argc, char * argv[])
   while(ros::ok())
   {
     current_time = ros::Time::now();
+    
+    // Read odometry and speed from RoMAA robot.
+    if( romaa->get_odometry(x, y, a) == -1 )
+      ROS_WARN("Unable to read odometry.");
+    usleep(100000);
+    if( romaa->get_speed(v, w) == -1 )
+      ROS_WARN("Unable to read speed.");
 
     // Odometry message
     odom_msg.header.stamp = current_time;
     odom_msg.header.frame_id = "odom";
+    odom_msg.child_frame_id = "base_link";
 
-    // Set odometry pose...
+    // Since all odometry is 6DOF we'll need a quaternion created from yaw.
+    geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(a);
+
+    // Set the position.
+    odom_msg.pose.pose.position.x = x;
+    odom_msg.pose.pose.position.y = y;
+    odom_msg.pose.pose.position.z = 0;
+    odom_msg.pose.pose.orientation = odom_quat;
+
+    // Set the velocity (in the child frame).
+    odom_msg.twist.twist.linear.x = v;
+    odom_msg.twist.twist.linear.y = 0;
+    odom_msg.twist.twist.angular.z = w;
 
 		//publish the message
 		odom_pub.publish(odom_msg);
