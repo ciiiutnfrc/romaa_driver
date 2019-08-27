@@ -4,7 +4,9 @@
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
 
-#include <tf/transform_datatypes.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>//toMsg
 
 #include <romaa_comm/romaa_comm.h>
 romaa_comm *romaa;
@@ -47,6 +49,11 @@ int main(int argc, char * argv[])
   float x, y, a, v, w;
   nav_msgs::Odometry odom_msg;
 
+  // tf2 variables.
+  tf2_ros::TransformBroadcaster tf_broadcaster;
+  geometry_msgs::TransformStamped odom_tf;
+  tf2::Quaternion odom_quat_tf;
+
   ros::Time current_time;
   ros::Rate loop_rate(10);// 10 Hz
   while(ros::ok())
@@ -60,19 +67,22 @@ int main(int argc, char * argv[])
     if( romaa->get_speed(v, w) == -1 )
       ROS_WARN("Unable to read speed.");
 
+    // tf2 orientation. Yaw angle to quaternion.
+    odom_quat_tf.setRPY(0, 0, a);
+
     // Odometry message
     odom_msg.header.stamp = current_time;
     odom_msg.header.frame_id = "odom";
     odom_msg.child_frame_id = "base_link";
 
     // Since all odometry is 6DOF we'll need a quaternion created from yaw.
-    geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(a);
+    geometry_msgs::Quaternion odom_quat_msg = tf2::toMsg(odom_quat_tf);
 
     // Set the position.
     odom_msg.pose.pose.position.x = x;
     odom_msg.pose.pose.position.y = y;
     odom_msg.pose.pose.position.z = 0;
-    odom_msg.pose.pose.orientation = odom_quat;
+    odom_msg.pose.pose.orientation = odom_quat_msg;
 
     // Set the velocity (in the child frame).
     odom_msg.twist.twist.linear.x = v;
@@ -81,6 +91,19 @@ int main(int argc, char * argv[])
 
 		//publish the message
 		odom_pub.publish(odom_msg);
+
+    // tf2.
+    odom_tf.header.stamp = current_time;
+    odom_tf.header.frame_id = "odom";
+    odom_tf.child_frame_id = "base_link";
+
+    odom_tf.transform.translation.x = x;        // X
+    odom_tf.transform.translation.y = y;        // Y
+    odom_tf.transform.translation.z = 0.0;      // Z
+    odom_tf.transform.rotation = odom_quat_msg; // Q
+
+    // Send the transform.
+    tf_broadcaster.sendTransform(odom_tf);
 
 		ros::spinOnce();
 		loop_rate.sleep();
