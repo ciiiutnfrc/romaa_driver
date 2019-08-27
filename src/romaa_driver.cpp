@@ -11,6 +11,7 @@
 
 // The srv class for the services.
 #include <std_srvs/Empty.h> 
+#include <std_srvs/SetBool.h>
 #include <romaa_ros/SetOdometry.h>
 
 #include <romaa_comm/romaa_comm.h>
@@ -25,6 +26,8 @@ bool resetOdometrySrvCb(std_srvs::Empty::Request &,
                         std_srvs::Empty::Response &);
 bool setOdometrySrvCb(romaa_ros::SetOdometry::Request &,
                       romaa_ros::SetOdometry::Response &);
+bool enableMotorSrvCb(std_srvs::SetBool::Request &,
+                      std_srvs::SetBool::Response &);
 
 int main(int argc, char * argv[])
 {
@@ -60,6 +63,8 @@ int main(int argc, char * argv[])
       &resetOdometrySrvCb);
   ros::ServiceServer set_odom_srv = nh.advertiseService("set_odometry", 
       &setOdometrySrvCb);
+  ros::ServiceServer motorsrv = nh.advertiseService("enable_motor", 
+      &enableMotorSrvCb);
 
   // Odometry variables
   float x, y, a, v, w;
@@ -159,3 +164,25 @@ bool setOdometrySrvCb(romaa_ros::SetOdometry::Request &req,
       << req.y << ", " << req.theta << ")");
   return true;
 }
+
+// 'enable_motor' services callback function.
+bool enableMotorSrvCb(std_srvs::SetBool::Request &req,
+    std_srvs::SetBool::Response &resp)
+{
+  if(req.data == true)
+  {
+    ROS_DEBUG("Enable motor");
+    romaa->enable_motor();
+    resp.success = true;
+    resp.message = "Motor enabled.";
+  }
+  else
+  {
+    ROS_DEBUG("Disable motor");
+    romaa->disable_motor();
+    resp.success = true;
+    resp.message = "Motor disabled.";
+  }
+  return true;
+}
+
