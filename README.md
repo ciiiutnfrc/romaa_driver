@@ -32,7 +32,7 @@ Paremeters:
 
 ## Launch files
 
- * `romaa.launch`:
- * `joy_teleop.launch`:
- * `uvc_cam.launch`:
+ * `romaa.launch`: run RoMAA's ROS driver node: Arguments: `port` and `baudrate`
+ * `joy_teleop.launch`: run joytick teleoperation nodes
+ * `uvc_cam.launch`: run camera node
 
