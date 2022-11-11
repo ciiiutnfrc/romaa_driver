@@ -1,0 +1,11 @@
+port: "/dev/ttyUSB0"
+baud: 115200
+reset_odom: true
+v_pid_kp: 1500.0
+v_pid_ki: 100.0
+v_pid_kd: 10.0
+w_pid_kp: 2000.0
+w_pid_ki: 100.0
+w_pid_kd: 20.0
+wheelbase: 0.44
+wheel_radius: 0.075

@@ -51,16 +51,15 @@ int main(int argc, char * argv[])
   // PID controller variables.
   float v_pid_kp, v_pid_ki, v_pid_kd;
   float w_pid_kp, w_pid_ki, w_pid_kd;
-  float wheelbase, left_radius, right_radius;
+  float wheelbase, wheel_radius;
   pnh.param<float>("v_pid_kp", v_pid_kp, 1800.0);
   pnh.param<float>("v_pid_ki", v_pid_ki, 100.0);
   pnh.param<float>("v_pid_kd", v_pid_kd, 10.0);
   pnh.param<float>("w_pid_kp", w_pid_kp, 2000.0);
   pnh.param<float>("w_pid_ki", w_pid_ki, 150.0);
   pnh.param<float>("w_pid_kd", w_pid_kd, 20.0);
-  pnh.param<float>("wheelbase", wheelbase, 0.480);
-  pnh.param<float>("left_radius", left_radius, 0.075);
-  pnh.param<float>("right_radius", right_radius, 0.075);
+  pnh.param<float>("wheelbase", wheelbase, 0.44);
+  pnh.param<float>("wheel_radius", wheel_radius, 0.075);
 
   // Open robot communication
   ROS_INFO_STREAM("Opening RoMAA communication in " << port << " at " << baud);
@@ -90,7 +89,7 @@ int main(int argc, char * argv[])
   romaa->set_v_pid(v_pid_kp, v_pid_ki, v_pid_kd);
   romaa->set_w_pid(w_pid_kp, w_pid_ki, w_pid_kd);
   ROS_INFO("Setting kinematic parameters.");
-  romaa->set_kinematic_params(wheelbase, left_radius, right_radius);
+  romaa->set_kinematic_params(wheelbase, wheel_radius);
 
   usleep(500000);
   ROS_INFO("Reading parameters:");
@@ -100,11 +99,10 @@ int main(int argc, char * argv[])
       v_pid_kp << ", " << v_pid_ki << ", " << v_pid_kd);
   ROS_INFO_STREAM("Linear angular PID (Kp, Ki, Kd): " <<
       w_pid_kp << ", " << w_pid_ki << ", " << w_pid_kd);
-  romaa->get_kinematic_params(wheelbase, left_radius, right_radius);
+  romaa->get_kinematic_params(wheelbase, wheel_radius);
   ROS_INFO("Kinematic parameters.");
   ROS_INFO_STREAM(" Wheelbase: " << wheelbase);
-  ROS_INFO_STREAM(" Left wheel radious: " << left_radius);
-  ROS_INFO_STREAM(" Right wheel radious: " << right_radius);
+  ROS_INFO_STREAM(" Left wheel radious: " << wheel_radius);
 
   if(reset_odom == true)
   {
@@ -124,8 +122,7 @@ int main(int argc, char * argv[])
           &setOdometrySrvCb);
   ros::ServiceServer motorsrv = nh.advertiseService("enable_motor", 
           &enableMotorSrvCb);
-  ros::ServiceServer server3 = nh.advertiseService("enable_motor", 
-          &enableMotorSrvCb);
+  ros::ServiceServer server4 = nh.advertiseService("reset", &resetSrvCb);
   ros::ServiceServer set_v_pid_srv = nh.advertiseService("set_linear_speed_pid",
           &setLinearSpeedSrvCb);
   ros::ServiceServer set_w_pid_srv = nh.advertiseService("set_angular_speed_pid",

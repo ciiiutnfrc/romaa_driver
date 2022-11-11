@@ -1,14 +1,13 @@
 <?xml version="1.0"?>
 <launch>
 
-  <!-- Arguments for RoMAA driver node -->
-  <arg name="port" default="/dev/ttyUSB0" />
-  <arg name="baudrate" default="115200" />
+  <arg name="joy" default="false" />
 
   <!-- Node of RoMAA driver -->
   <node pkg="romaa_driver" type="romaa_driver" name="romaa" output="screen" >
-    <param name="port" value="$(arg port)" />
-    <param name="baud" value="$(arg baudrate)" />
+    <rosparam file="$(find romaa_driver)/config/params.yaml" />
   </node>
+
+  <include file="$(find romaa_driver)/launch/joy_teleop.launch" if="$(arg joy) "/>
 
 </launch>
