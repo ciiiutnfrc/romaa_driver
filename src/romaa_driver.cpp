@@ -30,42 +30,46 @@ const double def_wheel_radious = 0.075;
 // Callback function definitions.
 void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& );
 bool resetOdometrySrvCb(std_srvs::Empty::Request & ,
-                        std_srvs::Empty::Response & );
+        std_srvs::Empty::Response & );
 bool setOdometrySrvCb(romaa_driver::SetOdometry::Request & ,
-                      romaa_driver::SetOdometry::Response & );
+        romaa_driver::SetOdometry::Response & );
 bool enableMotorSrvCb(std_srvs::SetBool::Request & ,
-                      std_srvs::SetBool::Response & );
+        std_srvs::SetBool::Response & );
 bool resetSrvCb(std_srvs::Empty::Request & ,
-                std_srvs::Empty::Response & );
+        std_srvs::Empty::Response & );
 bool setLinearSpeedSrvCb(romaa_driver::SetPid::Request & ,
-                         romaa_driver::SetPid::Response & );
+        romaa_driver::SetPid::Response & );
 bool setAngularSpeedSrvCb(romaa_driver::SetPid::Request & ,
-                          romaa_driver::SetPid::Response & );
+        romaa_driver::SetPid::Response & );
 
 int main(int argc, char * argv[])
 {
   ros::init(argc, argv, "romaa_driver");
-  ros::NodeHandle nh("~"); // private names
+  ros::NodeHandle nh;
+  ros::NodeHandle pnh("~");
 
   // Communication port variables
   std::string port;
   int baud;
-  nh.param<std::string>("port", port, def_port);
-  nh.param<int>("baud", baud, def_baud);
+  bool reset_odom, enable_motor;
+  pnh.param<std::string>("port", port, def_port);
+  pnh.param<int>("baud", baud, def_baud);
+  pnh.param<bool>("reset_odom", reset_odom, true);
+  pnh.param<bool>("enable_motor", enable_motor, false);
 
   // PID controller variables.
   float v_pid_kp, v_pid_ki, v_pid_kd;
   float w_pid_kp, w_pid_ki, w_pid_kd;
   float wheelbase, left_radius, right_radius;
-  nh.param<float>("v_pid_kp", v_pid_kp, def_v_pid_kp);
-  nh.param<float>("v_pid_ki", v_pid_ki, def_v_pid_ki);
-  nh.param<float>("v_pid_kd", v_pid_kd, def_v_pid_kd);
-  nh.param<float>("w_pid_kp", w_pid_kp, def_w_pid_kp);
-  nh.param<float>("w_pid_ki", w_pid_ki, def_w_pid_ki);
-  nh.param<float>("w_pid_kd", w_pid_kd, def_w_pid_kd);
-  nh.param<float>("wheelbase", wheelbase, def_wheelbase);
-  nh.param<float>("left_radius", left_radius, def_wheel_radious);
-  nh.param<float>("right_radius", right_radius, def_wheel_radious);
+  pnh.param<float>("v_pid_kp", v_pid_kp, def_v_pid_kp);
+  pnh.param<float>("v_pid_ki", v_pid_ki, def_v_pid_ki);
+  pnh.param<float>("v_pid_kd", v_pid_kd, def_v_pid_kd);
+  pnh.param<float>("w_pid_kp", w_pid_kp, def_w_pid_kp);
+  pnh.param<float>("w_pid_ki", w_pid_ki, def_w_pid_ki);
+  pnh.param<float>("w_pid_kd", w_pid_kd, def_w_pid_kd);
+  pnh.param<float>("wheelbase", wheelbase, def_wheelbase);
+  pnh.param<float>("left_radius", left_radius, def_wheel_radious);
+  pnh.param<float>("right_radius", right_radius, def_wheel_radious);
 
   // Open robot communication
   ROS_INFO_STREAM("Opening RoMAA communication in " << port << " at " << baud);
@@ -78,7 +82,17 @@ int main(int argc, char * argv[])
     ROS_FATAL("Could not connect to RoMAA.");
     ROS_BREAK();
   }
-  romaa->enable_motor();
+
+  if(enable_motor == true)
+  {
+    romaa->enable_motor();
+    ROS_WARN("Enable motors.");
+  }
+  else
+  {
+    romaa->disable_motor();
+    ROS_WARN("Disable motors.");
+  }
 
   // Setting embedded parameters.
   ROS_INFO("Setting PIDs parameters.");
@@ -100,6 +114,12 @@ int main(int argc, char * argv[])
   ROS_INFO_STREAM(" Wheelbase: " << wheelbase);
   ROS_INFO_STREAM(" Left wheel radious: " << left_radius);
   ROS_INFO_STREAM(" Right wheel radious: " << right_radius);
+
+  if(reset_odom == true)
+  {
+    romaa->reset_odometry();
+    ROS_INFO("Reset odometry.");
+  }
 
   // Publisher and subscriber objects.
   ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 100);

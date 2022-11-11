@@ -6,7 +6,7 @@
   <arg name="baudrate" default="115200" />
 
   <!-- Node of RoMAA driver -->
-  <node pkg="romaa_driver" type="romaa_driver" name="romaa" >
+  <node pkg="romaa_driver" type="romaa_driver" name="romaa" output="screen" >
     <param name="port" value="$(arg port)" />
     <param name="baud" value="$(arg baudrate)" />
   </node>
