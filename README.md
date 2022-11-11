@@ -6,12 +6,12 @@ This package contains the driver node and launch files for the RoMAA robot.
 
 Usage
 ```
-rosrun romaa_ros romaa_driver
+rosrun romaa_driver romaa_driver
 ```
 
 Example:
 ```
-rosrun romaa_ros romaa_driver _port=/dev/ttyUSB1 _baud=57600
+rosrun romaa_driver romaa_driver _port=/dev/ttyUSB1 _baud=57600
 ```
 
 Paremeters:
@@ -26,7 +26,7 @@ Paremeters:
 
 ### Services
  * `reset_odometry` (`std_srvs/Empty`): reset robot odometry
- * `set_odometry` (`romaa_ros/SetOdometry`): set robot odometry
+ * `set_odometry` (`romaa_driver/SetOdometry`): set robot odometry
  * `enable_motor` (`std_srvs(SetBool`): enable (`data: true`) or disable (`data: false`) motors
 
 

@@ -12,7 +12,7 @@
 // The srv class for the services.
 #include <std_srvs/Empty.h> 
 #include <std_srvs/SetBool.h>
-#include <romaa_ros/SetOdometry.h>
+#include <romaa_driver/SetOdometry.h>
 
 #include <romaa_comm/romaa_comm.h>
 romaa_comm *romaa;
@@ -24,8 +24,8 @@ const int def_baud = 115200;
 void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& );
 bool resetOdometrySrvCb(std_srvs::Empty::Request &,
                         std_srvs::Empty::Response &);
-bool setOdometrySrvCb(romaa_ros::SetOdometry::Request &,
-                      romaa_ros::SetOdometry::Response &);
+bool setOdometrySrvCb(romaa_driver::SetOdometry::Request &,
+                      romaa_driver::SetOdometry::Response &);
 bool enableMotorSrvCb(std_srvs::SetBool::Request &,
                       std_srvs::SetBool::Response &);
 
@@ -156,8 +156,8 @@ bool resetOdometrySrvCb(std_srvs::Empty::Request &req,
 }
 
 // 'set_odometry' services callback function.
-bool setOdometrySrvCb(romaa_ros::SetOdometry::Request &req,
-    romaa_ros::SetOdometry::Response &resp)
+bool setOdometrySrvCb(romaa_driver::SetOdometry::Request &req,
+    romaa_driver::SetOdometry::Response &resp)
 {
   romaa->set_odometry(req.x, req.y, req.theta);
   ROS_DEBUG_STREAM("Setting odometry to (" << req.x << ", "

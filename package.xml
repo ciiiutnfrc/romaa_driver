@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>romaa_ros</name>
+  <name>romaa_driver</name>
   <version>0.1.0</version>
   <description>
-    The romaa_ros package
+    The romaa_driver package
 
     This package contains the romaa_driver node.
   </description>
@@ -23,7 +23,7 @@
   <!-- Url tags are optional, but multiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/romaa_ros</url> -->
+  <!-- <url type="website">http://wiki.ros.org/romaa_driver</url> -->
 
 
   <!-- Author tags are optional, multiple are allowed, one per tag -->
