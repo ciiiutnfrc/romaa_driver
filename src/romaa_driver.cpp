@@ -6,13 +6,14 @@
 
 // tf2 library headers.
 #include <tf2_ros/transform_broadcaster.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>//toMsg
+#include <tf2/LinearMath/Quaternion.h>            // tf2::Quaternion
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>  //toMsg
 
 // The srv class for the services.
 #include <std_srvs/Empty.h> 
 #include <std_srvs/SetBool.h>
 #include <romaa_driver/SetOdometry.h>
+#include <romaa_driver/SetPid.h>
 
 #include <romaa_comm/romaa_comm.h>
 romaa_comm *romaa;
@@ -20,18 +21,30 @@ romaa_comm *romaa;
 const std::string def_port = "/dev/ttyUSB0";
 const int def_baud = 115200;
 
+// Default PID and kinematic parameters.
+const double def_v_pid_kp = 1800, def_v_pid_ki = 100, def_v_pid_kd = 10;
+const double def_w_pid_kp = 2000, def_w_pid_ki = 150, def_w_pid_kd = 20;
+const double def_wheelbase = 0.480;
+const double def_wheel_radious = 0.075;
+
 // Callback function definitions.
 void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& );
-bool resetOdometrySrvCb(std_srvs::Empty::Request &,
-                        std_srvs::Empty::Response &);
-bool setOdometrySrvCb(romaa_driver::SetOdometry::Request &,
-                      romaa_driver::SetOdometry::Response &);
-bool enableMotorSrvCb(std_srvs::SetBool::Request &,
-                      std_srvs::SetBool::Response &);
+bool resetOdometrySrvCb(std_srvs::Empty::Request & ,
+                        std_srvs::Empty::Response & );
+bool setOdometrySrvCb(romaa_driver::SetOdometry::Request & ,
+                      romaa_driver::SetOdometry::Response & );
+bool enableMotorSrvCb(std_srvs::SetBool::Request & ,
+                      std_srvs::SetBool::Response & );
+bool resetSrvCb(std_srvs::Empty::Request & ,
+                std_srvs::Empty::Response & );
+bool setLinearSpeedSrvCb(romaa_driver::SetPid::Request & ,
+                         romaa_driver::SetPid::Response & );
+bool setAngularSpeedSrvCb(romaa_driver::SetPid::Request & ,
+                          romaa_driver::SetPid::Response & );
 
 int main(int argc, char * argv[])
 {
-  ros::init(argc, argv, "romaa");
+  ros::init(argc, argv, "romaa_driver");
   ros::NodeHandle nh("~"); // private names
 
   // Communication port variables
@@ -39,6 +52,20 @@ int main(int argc, char * argv[])
   int baud;
   nh.param<std::string>("port", port, def_port);
   nh.param<int>("baud", baud, def_baud);
+
+  // PID controller variables.
+  float v_pid_kp, v_pid_ki, v_pid_kd;
+  float w_pid_kp, w_pid_ki, w_pid_kd;
+  float wheelbase, left_radius, right_radius;
+  nh.param<float>("v_pid_kp", v_pid_kp, def_v_pid_kp);
+  nh.param<float>("v_pid_ki", v_pid_ki, def_v_pid_ki);
+  nh.param<float>("v_pid_kd", v_pid_kd, def_v_pid_kd);
+  nh.param<float>("w_pid_kp", w_pid_kp, def_w_pid_kp);
+  nh.param<float>("w_pid_ki", w_pid_ki, def_w_pid_ki);
+  nh.param<float>("w_pid_kd", w_pid_kd, def_w_pid_kd);
+  nh.param<float>("wheelbase", wheelbase, def_wheelbase);
+  nh.param<float>("left_radius", left_radius, def_wheel_radious);
+  nh.param<float>("right_radius", right_radius, def_wheel_radious);
 
   // Open robot communication
   ROS_INFO_STREAM("Opening RoMAA communication in " << port << " at " << baud);
@@ -53,6 +80,27 @@ int main(int argc, char * argv[])
   }
   romaa->enable_motor();
 
+  // Setting embedded parameters.
+  ROS_INFO("Setting PIDs parameters.");
+  romaa->set_v_pid(v_pid_kp, v_pid_ki, v_pid_kd);
+  romaa->set_w_pid(w_pid_kp, w_pid_ki, w_pid_kd);
+  ROS_INFO("Setting kinematic parameters.");
+  romaa->set_kinematic_params(wheelbase, left_radius, right_radius);
+
+  usleep(500000);
+  ROS_INFO("Reading parameters:");
+  romaa->get_v_pid(v_pid_kp, v_pid_ki, v_pid_kd);
+  romaa->get_w_pid(w_pid_kp, w_pid_ki, w_pid_kd);
+  ROS_INFO_STREAM("Linear speed PID (Kp, Ki, Kd): " <<
+      v_pid_kp << ", " << v_pid_ki << ", " << v_pid_kd);
+  ROS_INFO_STREAM("Linear angular PID (Kp, Ki, Kd): " <<
+      w_pid_kp << ", " << w_pid_ki << ", " << w_pid_kd);
+  romaa->get_kinematic_params(wheelbase, left_radius, right_radius);
+  ROS_INFO("Kinematic parameters.");
+  ROS_INFO_STREAM(" Wheelbase: " << wheelbase);
+  ROS_INFO_STREAM(" Left wheel radious: " << left_radius);
+  ROS_INFO_STREAM(" Right wheel radious: " << right_radius);
+
   // Publisher and subscriber objects.
   ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 100);
   ros::Subscriber cmd_vel_sub = nh.subscribe<geometry_msgs::Twist>("cmd_vel",\
@@ -65,6 +113,10 @@ int main(int argc, char * argv[])
       &setOdometrySrvCb);
   ros::ServiceServer motorsrv = nh.advertiseService("enable_motor", 
       &enableMotorSrvCb);
+  ros::ServiceServer set_v_pid_srv = nh.advertiseService("set_linear_speed_pid",
+          &setLinearSpeedSrvCb);
+  ros::ServiceServer set_w_pid_srv = nh.advertiseService("set_angular_speed_pid",
+          &setAngularSpeedSrvCb);
 
   // Odometry variables
   float x, y, a, v, w;
@@ -142,8 +194,8 @@ int main(int argc, char * argv[])
 void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& cmd_vel)
 {
   romaa->set_speed(cmd_vel->linear.x, cmd_vel->angular.z);
-  ROS_DEBUG_STREAM("Setting speed. v: " << cmd_vel->linear.x 
-      << ", w: " << cmd_vel->angular.z);
+  ROS_DEBUG("Setting speed. v: %3f, w: %3f.", cmd_vel->linear.x, 
+          cmd_vel->angular.z);
 }
 
 // 'reset_odometry' services callback function.
@@ -160,8 +212,8 @@ bool setOdometrySrvCb(romaa_driver::SetOdometry::Request &req,
     romaa_driver::SetOdometry::Response &resp)
 {
   romaa->set_odometry(req.x, req.y, req.theta);
-  ROS_DEBUG_STREAM("Setting odometry to (" << req.x << ", "
-      << req.y << ", " << req.theta << ")");
+  ROS_DEBUG("Setting odometry to (%.3f, %.3f, %.3f)", req.x,
+          req.y, req.theta);
   return true;
 }
 
@@ -186,3 +238,28 @@ bool enableMotorSrvCb(std_srvs::SetBool::Request &req,
   return true;
 }
 
+bool resetSrvCb(std_srvs::Empty::Request &req,
+    std_srvs::Empty::Response &resp)
+{
+  romaa->reset();
+  ROS_DEBUG("Reset embedded controller...");
+  return true;
+}
+
+bool setLinearSpeedSrvCb(romaa_driver::SetPid::Request &req,
+    romaa_driver::SetPid::Response &resp)
+{
+  romaa->set_v_pid(req.kp, req.ki, req.kd);
+  ROS_DEBUG("Setting linear speed PID to (%.3f, %.3f, %.3f)", req.kp,
+          req.ki, req.kd);
+  return true;
+}
+
+bool setAngularSpeedSrvCb(romaa_driver::SetPid::Request &req,
+    romaa_driver::SetPid::Response &resp)
+{
+  romaa->set_w_pid(req.kp, req.ki, req.kd);
+  ROS_DEBUG("Setting angular speed PID to (%.3f, %.3f, %.3f)", req.kp,
+          req.ki, req.kd);
+  return true;
+}
