@@ -1,11 +1,19 @@
+# Serial communication
 port: "/dev/ttyUSB0"
 baud: 115200
+
+# Starting configuration
 reset_odom: true
+enable_motor: false
+
+# PID constants
 v_pid_kp: 1500.0
 v_pid_ki: 100.0
 v_pid_kd: 10.0
 w_pid_kp: 2000.0
 w_pid_ki: 100.0
 w_pid_kd: 20.0
+
+# Kinematic parameters
 wheelbase: 0.44
 wheel_radius: 0.075

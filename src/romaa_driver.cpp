@@ -39,30 +39,32 @@ int main(int argc, char * argv[])
   ros::NodeHandle nh;
   ros::NodeHandle pnh("~");
 
-  // Communication port variables
+  // Node parameters.
+  float frequency;
+  bool reset_odom, enable_motor;
   std::string port;
   int baud;
-  bool reset_odom, enable_motor;
+  float wheelbase, wheel_radius;
+  pnh.param<float>("frequency", frequency, 10.0);
   pnh.param<std::string>("port", port, "/dev/ttyUSB0");
   pnh.param<int>("baud", baud, 115200);
   pnh.param<bool>("reset_odom", reset_odom, true);
   pnh.param<bool>("enable_motor", enable_motor, false);
+  pnh.param<float>("wheelbase", wheelbase, 0.44);
+  pnh.param<float>("wheel_radius", wheel_radius, 0.075);
 
   // PID controller variables.
   float v_pid_kp, v_pid_ki, v_pid_kd;
   float w_pid_kp, w_pid_ki, w_pid_kd;
-  float wheelbase, wheel_radius;
   pnh.param<float>("v_pid_kp", v_pid_kp, 1800.0);
   pnh.param<float>("v_pid_ki", v_pid_ki, 100.0);
   pnh.param<float>("v_pid_kd", v_pid_kd, 10.0);
   pnh.param<float>("w_pid_kp", w_pid_kp, 2000.0);
   pnh.param<float>("w_pid_ki", w_pid_ki, 150.0);
   pnh.param<float>("w_pid_kd", w_pid_kd, 20.0);
-  pnh.param<float>("wheelbase", wheelbase, 0.44);
-  pnh.param<float>("wheel_radius", wheel_radius, 0.075);
 
   // Open robot communication
-  ROS_INFO_STREAM("Opening RoMAA communication in " << port << " at " << baud);
+  ROS_INFO("Opening RoMAA communication in %s at %d", port.c_str(), baud);
   romaa = new romaa_comm(port.c_str(), baud);
   
   if(romaa->is_connected() == true)
@@ -139,7 +141,7 @@ int main(int argc, char * argv[])
   tf2::Quaternion odom_quat_tf;
 
   ros::Time current_time;
-  ros::Rate loop_rate(10);// 10 Hz
+  ros::Rate loop_rate(frequency);
   while(ros::ok())
   {
     current_time = ros::Time::now();
