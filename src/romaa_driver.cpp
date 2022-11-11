@@ -18,15 +18,6 @@
 #include <romaa_comm/romaa_comm.h>
 romaa_comm *romaa;
 
-const std::string def_port = "/dev/ttyUSB0";
-const int def_baud = 115200;
-
-// Default PID and kinematic parameters.
-const double def_v_pid_kp = 1800, def_v_pid_ki = 100, def_v_pid_kd = 10;
-const double def_w_pid_kp = 2000, def_w_pid_ki = 150, def_w_pid_kd = 20;
-const double def_wheelbase = 0.480;
-const double def_wheel_radious = 0.075;
-
 // Callback function definitions.
 void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& );
 bool resetOdometrySrvCb(std_srvs::Empty::Request & ,
@@ -52,8 +43,8 @@ int main(int argc, char * argv[])
   std::string port;
   int baud;
   bool reset_odom, enable_motor;
-  pnh.param<std::string>("port", port, def_port);
-  pnh.param<int>("baud", baud, def_baud);
+  pnh.param<std::string>("port", port, "/dev/ttyUSB0");
+  pnh.param<int>("baud", baud, 115200);
   pnh.param<bool>("reset_odom", reset_odom, true);
   pnh.param<bool>("enable_motor", enable_motor, false);
 
@@ -61,15 +52,15 @@ int main(int argc, char * argv[])
   float v_pid_kp, v_pid_ki, v_pid_kd;
   float w_pid_kp, w_pid_ki, w_pid_kd;
   float wheelbase, left_radius, right_radius;
-  pnh.param<float>("v_pid_kp", v_pid_kp, def_v_pid_kp);
-  pnh.param<float>("v_pid_ki", v_pid_ki, def_v_pid_ki);
-  pnh.param<float>("v_pid_kd", v_pid_kd, def_v_pid_kd);
-  pnh.param<float>("w_pid_kp", w_pid_kp, def_w_pid_kp);
-  pnh.param<float>("w_pid_ki", w_pid_ki, def_w_pid_ki);
-  pnh.param<float>("w_pid_kd", w_pid_kd, def_w_pid_kd);
-  pnh.param<float>("wheelbase", wheelbase, def_wheelbase);
-  pnh.param<float>("left_radius", left_radius, def_wheel_radious);
-  pnh.param<float>("right_radius", right_radius, def_wheel_radious);
+  pnh.param<float>("v_pid_kp", v_pid_kp, 1800.0);
+  pnh.param<float>("v_pid_ki", v_pid_ki, 100.0);
+  pnh.param<float>("v_pid_kd", v_pid_kd, 10.0);
+  pnh.param<float>("w_pid_kp", w_pid_kp, 2000.0);
+  pnh.param<float>("w_pid_ki", w_pid_ki, 150.0);
+  pnh.param<float>("w_pid_kd", w_pid_kd, 20.0);
+  pnh.param<float>("wheelbase", wheelbase, 0.480);
+  pnh.param<float>("left_radius", left_radius, 0.075);
+  pnh.param<float>("right_radius", right_radius, 0.075);
 
   // Open robot communication
   ROS_INFO_STREAM("Opening RoMAA communication in " << port << " at " << baud);
@@ -122,29 +113,32 @@ int main(int argc, char * argv[])
   }
 
   // Publisher and subscriber objects.
-  ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 100);
+  ros::Publisher odom_pub = nh.advertise<nav_msgs::Odometry>("odom", 10);
   ros::Subscriber cmd_vel_sub = nh.subscribe<geometry_msgs::Twist>("cmd_vel",\
       1, cmdVelCallback);
 
   // Services objects.
   ros::ServiceServer reset_odom_srv = nh.advertiseService("reset_odometry", 
-      &resetOdometrySrvCb);
+          &resetOdometrySrvCb);
   ros::ServiceServer set_odom_srv = nh.advertiseService("set_odometry", 
-      &setOdometrySrvCb);
+          &setOdometrySrvCb);
   ros::ServiceServer motorsrv = nh.advertiseService("enable_motor", 
-      &enableMotorSrvCb);
+          &enableMotorSrvCb);
+  ros::ServiceServer server3 = nh.advertiseService("enable_motor", 
+          &enableMotorSrvCb);
   ros::ServiceServer set_v_pid_srv = nh.advertiseService("set_linear_speed_pid",
           &setLinearSpeedSrvCb);
   ros::ServiceServer set_w_pid_srv = nh.advertiseService("set_angular_speed_pid",
           &setAngularSpeedSrvCb);
 
-  // Odometry variables
+  // Odometry variables.
   float x, y, a, v, w;
   nav_msgs::Odometry odom_msg;
 
   // tf2 variables.
   tf2_ros::TransformBroadcaster tf_broadcaster;
   geometry_msgs::TransformStamped odom_tf;
+  geometry_msgs::Quaternion odom_quat_msg;
   tf2::Quaternion odom_quat_tf;
 
   ros::Time current_time;
@@ -169,7 +163,7 @@ int main(int argc, char * argv[])
     odom_msg.child_frame_id = "base_link";
 
     // Since all odometry is 6DOF we'll need a quaternion created from yaw.
-    geometry_msgs::Quaternion odom_quat_msg = tf2::toMsg(odom_quat_tf);
+    odom_quat_msg = tf2::toMsg(odom_quat_tf);
 
     // Set the position.
     odom_msg.pose.pose.position.x = x;
@@ -182,8 +176,8 @@ int main(int argc, char * argv[])
     odom_msg.twist.twist.linear.y = 0;
     odom_msg.twist.twist.angular.z = w;
 
-		//publish the message
-		odom_pub.publish(odom_msg);
+    // Publish the message.
+    odom_pub.publish(odom_msg);
 
     // tf2.
     odom_tf.header.stamp = current_time;
@@ -198,8 +192,9 @@ int main(int argc, char * argv[])
     // Send the transform.
     tf_broadcaster.sendTransform(odom_tf);
 
-		ros::spinOnce();
-		loop_rate.sleep();
+    // Processes incoming messages via callbacks.
+    ros::spinOnce();
+    loop_rate.sleep();
   }
 
   ros::shutdown();
